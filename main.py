@@ -6,6 +6,9 @@ from time import sleep
 
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.by import By
 
 options = webdriver.ChromeOptions()
 options.add_argument('--ignore-certificate-errors')
@@ -13,6 +16,9 @@ options.add_argument('--test-type')
 options.add_argument("--disable-notifications")
 options.binary_location = '/usr/bin/chromium'
 driver = webdriver.Chrome(options=options)
+
+driver.implicitly_wait(20)
+wait = WebDriverWait(driver, 20)
 
 
 def login(url='https://www.facebook.com'):
@@ -47,7 +53,9 @@ def profile_pics_page(url="https://wwww.facebook.com/photos"):
 
     sleep(2)
 
-    albums_tab_link = driver.find_element_by_id('u_0_1y')
+    albums_tab_link = wait.until(
+        EC.presence_of_element_located((By.ID, 'u_0_1y'))
+    )
     albums_tab_link.click()
 
     sleep(1)
@@ -64,28 +72,42 @@ def profile_pics_page(url="https://wwww.facebook.com/photos"):
 
 def delete_profile_pics():
     while True:
+        sleep(4)
         try:
-            toggle_menu = driver.find_elements_by_class_name('fbTimelineSelectorButton')[1]
+            # toggle_menu = driver.find_elements_by_class_name('fbTimelineSelectorButton')[1]
+            toggle_menu = wait.until(
+                EC.presence_of_all_elements_located((By.CLASS_NAME, 'fbTimelineSelectorButton'))
+            )[1]
         except NoSuchElementException:
             print("Can't Find PFP Element")
             break
 
-        driver.execute_script("arguments[0].click();", toggle_menu)
+        sleep(4)
+
+        js_click(toggle_menu)
+
+        sleep(4)
+
+        # delete_option = driver.find_element_by_xpath('//a[@data-action-type="delete_photo"]')
+        delete_option = wait.until(
+            EC.presence_of_element_located((By.XPATH, '//a[@data-action-type="delete_photo"]'))
+        )
+        delete_option.click()
+        sleep(1)
+
+        # buttons = driver.find_elements_by_xpath('//button[@type="submit"]')
+        buttons = wait.until(
+            EC.presence_of_all_elements_located((By.XPATH, '//button[@type="submit"]'))
+        )
 
         sleep(2)
 
-        delete_option = driver.find_element_by_xpath('//a[@data-action-type="delete_photo"]')
-        delete_option.click()
-
-        sleep(1)
-
-        buttons = driver.find_elements_by_xpath('//button[@type="submit"]')
         for btn in buttons:
-            if 'layerConfirm uiOverlayButton' in btn.get_attribute('class'):
-                break
-        btn.click()
+            # if 'layerConfirm uiOverlayButton' in btn.get_attribute('class'):
+            if btn.get_attribute("innerHTML") == 'Delete':
+                print(True)
+                js_click(btn)
 
-        sleep(3)
 
 
 def delete_posts_loop():
@@ -127,11 +149,15 @@ def delete_posts_loop():
         sleep(10)
 
 
+def js_click(elem):
+    driver.execute_script("arguments[0].click();", elem)
+
+
 login()
 
 # TODO Delete Profile Pics
 profile_pics_page()
-test = delete_profile_pics()
+b = delete_profile_pics()
 
 
 # manage_posts_page()
